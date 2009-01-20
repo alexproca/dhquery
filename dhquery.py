@@ -6,9 +6,11 @@
 from random import Random
 from pydhcplib.dhcp_packet import *
 from pydhcplib.dhcp_network import *
-from pydhcplib.type_hw_addr import *
+from pydhcplib.type_hw_addr import hwmac
+from pydhcplib.type_ipv4 import ipv4
 from time import sleep
 import socket
+from optparse import OptionParser
 
 r = Random()
 r.seed()
@@ -55,13 +57,6 @@ def getmac():
 		mac = mac >> 8
 	return m
 		
-def getxid():
-	decxid = r.randint(0,0xffffffff)
-	xid = []
-	for i in xrange(4):
-		xid.insert(0, decxid & 0xff)
-		decxid = decxid >> 8
-	return xid
 
 def str2mac(l):
 	return ':'.join(map(lambda x:"%x"%int(x),l))
@@ -146,19 +141,53 @@ def sendLeaseQuery(mac):
 #		sleep(0.1)
 	
 
-from optparse import OptionParser
+def genxid():
+	decxid = r.randint(0,0xffffffff)
+	xid = []
+	for i in xrange(4):
+		xid.insert(0, decxid & 0xff)
+		decxid = decxid >> 8
+	return xid
+
+
+def preparePacket(xid=None,giaddr='0.0.0.0',chaddr='00:00:00:00:00:00',ciaddr='0.0.0.0',msgtype='discovery'):
+	req = DhcpPacket()
+	req.SetOption('op',[1])
+	req.SetOption('htype',[1])
+	req.SetOption('hlen',[6])
+	req.SetOption('hops',[0])
+	if not xid: xid = genxid()
+	req.SetOption('xid',xid)
+	print giaddr
+	print chaddr
+	req.SetOption('giaddr',ipv4(giaddr).list())
+	req.SetOption('chaddr',hwmac(chaddr).list() + [0] * 10)
+	req.SetOption('ciaddr',ipv4(ciaddr).list())
+	if msgtype == 'request':
+		mt = 3
+	elif msgtype == 'release':
+		mt = 7
+	else:
+		mt = 1
+	req.SetOption('dhcp_message_type',[mt])
+	return req
+
+
 def main():
 	parser =  OptionParser()
 	parser.add_option("-s","--server", dest="server", help="DHCP server IP")
-	parser.add_option("-p","--port", type="int", dest="port", help="DHCP server port")
-	parser.add_option("-m","--mac","--chaddr", dest="chaddr", help="chaddr: Client's MAC address")
-	parser.add_option("-c","--ciaddr", dest="ciaddr", help="ciaddr: Client's desired IP address")
-	parser.add_option("-g","--giaddr", dest="giaddr", help="giaddr: Gateway IP address (if any)")
-	parser.add_option("-t","--type", dest="msgtype", default="discovery", help="DHCP message type: discovery, request, release (default %default)")
+	parser.add_option("-p","--port", type="int", dest="port", default=67, help="DHCP server port")
+	parser.add_option("-m","--mac","--chaddr", dest="chaddr", default='00:00:00:00:00:00', help="chaddr: Client's MAC address")
+	parser.add_option("-c","--ciaddr", dest="ciaddr", default='0.0.0.0', help="ciaddr: Client's desired IP address")
+	parser.add_option("-g","--giaddr", dest="giaddr", default='0.0.0.0', help="giaddr: Gateway IP address (if any)")
+	parser.add_option("-t","--type", dest="msgtype", type="choice", choices=["discovery","request","release"],
+			default="discovery", help="DHCP message type: discovery, request, release (default %default)")
 	parser.add_option("-w","--timeout", dest="udptimeout", type="int", default=4, help="UDP timeout (default %default)")
 	parser.add_option("-y","--cycle", action="store_true", dest="docycle", help="Do full cycle: DISCOVERY, REQUEST, RELEASE")
-	(options, args) = parser.parse_args()
-	print options
+	parser.add_option("-r","--require", action="append", type="int", dest="required_opts", help="Reuire options by its number")
+	(opts, args) = parser.parse_args()
+	print opts
+	print preparePacket(giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=opts.ciaddr, msgtype=opts.msgtype).PrintHeaders()
 
 	#server = silentClient(client_listen_port=67, server_listen_port=67)
 	#server.dhcp_socket.settimeout(4)
