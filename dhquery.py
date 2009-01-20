@@ -26,7 +26,6 @@ dhcpTypes = {
 
 }
 
-
 class SilentClient(DhcpClient):
 	
 	def HandleDhcpAck(self,p):
@@ -54,6 +53,8 @@ def receivePacket(serverip, serverport, timeout, req):
 	server.dhcp_socket.settimeout(timeout)
 	if serverip == '0.0.0.0': req.SetOption('flags',[128, 0])
 	server.SendDhcpPacketTo(serverip,req)
+	if req.GetOption('dhcp_message_type')[0] in [7,]:
+		return None
 	return server.GetNextDhcpPacket()
 
 def preparePacket(xid=None,giaddr='0.0.0.0',chaddr='00:00:00:00:00:00',ciaddr='0.0.0.0',msgtype='discover',required_opts=[]):
@@ -91,38 +92,65 @@ def main():
 	parser.add_option("-r","--require", action="append", type="int", default=[1,3,6,51], dest="required_opts", help="Require options by its number")
 	parser.add_option("-v","--verbose", action="store_true", dest="verbose", help="Verbose operation")
 	parser.add_option("-q","--quiet", action="store_false", dest="verbose", help="Quiet operation")
-	#parser.add_option("-y","--cycle", action="store_true", dest="docycle", help="Do full cycle: DISCOVERY, REQUEST, RELEASE")
+	parser.add_option("-y","--cycle", action="store_true", dest="docycle", help="Do full cycle: DISCOVERY, REQUEST, RELEASE")
 	(opts, args) = parser.parse_args()
 	verbose = opts.verbose
-	req = preparePacket(giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=opts.ciaddr, msgtype=opts.msgtype, required_opts=opts.required_opts)
-	if verbose == True:
-		print "-"*100
-		print "Sending %s [%s] packet to %s"%(opts.msgtype.upper(),opts.chaddr, opts.server)
-		print "-"*100
-		req.PrintHeaders()
-		req.PrintOptions()
-		print "="*100
-		print "\n"
-	elif verbose != False:
-		print "Sending %s [%s] packet to %s"%(opts.msgtype.upper(),opts.chaddr, opts.server)
-	
-	res = receivePacket(serverip=opts.server, serverport=opts.port, timeout=opts.timeout, req=req)
-	
-	dhcp_message_type = res.GetOption('dhcp_message_type')[0]
-	server_identifier = ipv4(res.GetOption('server_identifier'))
-	chaddr = hwmac(res.GetOption('chaddr')[:6])
-	yiaddr = ipv4(res.GetOption('yiaddr'))
 
-	if verbose == True:
-		print "-"*100
-		print "Received %s packet from %s; [%s] was bound to %s"%(dhcpTypes.get(dhcp_message_type,'UNKNOWN'), server_identifier, chaddr, yiaddr )
-		print "-"*100
-		res.PrintHeaders()
-		res.PrintOptions()
-		print "="*100
-		print "\n"
-	elif verbose != False:
-		print "Received %s packet from %s; [%s] was bound to %s"%(dhcpTypes.get(dhcp_message_type,'UNKNOWN'), server_identifier, chaddr, yiaddr )
+	if opts.docycle:
+		request_dhcp_message_type = "discover"
+	else:
+		request_dhcp_message_type = opts.msgtype
+
+	request_ciaddr = opts.ciaddr 
+	serverip = opts.server 
+	
+	while True:
+
+		req = preparePacket(giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=request_ciaddr, msgtype=request_dhcp_message_type, required_opts=opts.required_opts)
+		if verbose != False:
+			print "Sending %s [%s] packet to %s"%(request_dhcp_message_type.upper(),opts.chaddr, opts.server)
+		if verbose == True:
+			print "-"*100
+			req.PrintHeaders()
+			req.PrintOptions()
+			print "="*100
+			print "\n"
+		
+		try:
+			res = receivePacket(serverip=serverip, serverport=opts.port, timeout=opts.timeout, req=req)
+		except socket.timeout:
+			res = None
+			if verbose != False: print "Timed out."
+			pass
+	
+		if res:
+			dhcp_message_type = res.GetOption('dhcp_message_type')[0]
+			server_identifier = ipv4(res.GetOption('server_identifier'))
+			chaddr = hwmac(res.GetOption('chaddr')[:6])
+			yiaddr = ipv4(res.GetOption('yiaddr'))
+	
+			if verbose != False:
+				print "Received %s packet from %s; [%s] was bound to %s"%(dhcpTypes.get(dhcp_message_type,'UNKNOWN'), server_identifier, chaddr, yiaddr )
+			if verbose == True:
+				print "-"*100
+				res.PrintHeaders()
+				res.PrintOptions()
+				print "="*100
+				print "\n"
+
+			if opts.docycle:
+				if dhcp_message_type == 2:
+					request_dhcp_message_type = 'request'
+					request_ciaddr = yiaddr.str()
+					serverip = server_identifier.str()
+					continue
+				
+				if dhcp_message_type == 5:
+					request_dhcp_message_type = 'release'
+					request_ciaddr = yiaddr.str()
+					serverip = server_identifier.str()
+					continue
+
 
 if __name__ == '__main__':
 	main()
