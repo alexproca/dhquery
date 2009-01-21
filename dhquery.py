@@ -93,6 +93,7 @@ def main():
 	parser.add_option("-v","--verbose", action="store_true", dest="verbose", help="Verbose operation")
 	parser.add_option("-q","--quiet", action="store_false", dest="verbose", help="Quiet operation")
 	parser.add_option("-y","--cycle", action="store_true", dest="docycle", help="Do full cycle: DISCOVERY, REQUEST, RELEASE")
+	parser.add_option("-n","--cycles", dest="cycles", type="int", default="1", help="Do submitten number of cycles")
 	(opts, args) = parser.parse_args()
 	verbose = opts.verbose
 
@@ -103,8 +104,14 @@ def main():
 
 	request_ciaddr = opts.ciaddr 
 	serverip = opts.server 
+	cycleno = 1
 	
 	while True:
+		
+		if opts.verbose is not False:
+			print "="*100
+			print "| Cycle %s"%cycleno
+			print "="*100
 
 		req = preparePacket(giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=request_ciaddr, msgtype=request_dhcp_message_type, required_opts=opts.required_opts)
 		if verbose != False:
@@ -150,6 +157,16 @@ def main():
 					request_ciaddr = yiaddr.str()
 					serverip = server_identifier.str()
 					continue
+		
+		cycleno += 1
+		if cycleno > opts.cycles:
+				break
+		
+
+		if opts.docycle:
+			request_dhcp_message_type = 'discovery'
+			request_ciaddr = opts.ciaddr 
+			serverip = opts.server 
 
 
 if __name__ == '__main__':
