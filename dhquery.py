@@ -39,6 +39,10 @@ class SilentClient(DhcpClient):
 	
 	def HandleDhcpUnknown(self,p):
 		return
+
+	def HandleDhcpDiscover(self,p):
+		return
+
 	
 def genxid():
 	decxid = r.randint(0,0xffffffff)
@@ -49,13 +53,18 @@ def genxid():
 	return xid
 
 def receivePacket(serverip, serverport, timeout, req):
-	server = SilentClient(client_listen_port=67, server_listen_port=serverport)
-	server.dhcp_socket.settimeout(timeout)
+	"""Sends and receives packet from DHCP server"""
+	client = SilentClient(client_listen_port=67, server_listen_port=serverport)
+	client.dhcp_socket.settimeout(timeout)
 	if serverip == '0.0.0.0': req.SetOption('flags',[128, 0])
-	server.SendDhcpPacketTo(serverip,req)
-	if req.GetOption('dhcp_message_type')[0] in [7,]:
-		return None
-	return server.GetNextDhcpPacket()
+	req_type = req.GetOption('dhcp_message_type')[0]
+	client.SendDhcpPacketTo(serverip,req)
+	# Don't wait answer for RELEASE message
+	if req_type == 7: return None
+	res = client.GetNextDhcpPacket()
+	# Try next packet if this packet is the same as packet we've sent.
+	if res.GetOption('dhcp_message_type')[0] == req_type: res = client.GetNextDhcpPacket()
+	return res
 
 def preparePacket(xid=None,giaddr='0.0.0.0',chaddr='00:00:00:00:00:00',ciaddr='0.0.0.0',msgtype='discover',required_opts=[]):
 	req = DhcpPacket()
@@ -81,8 +90,8 @@ def preparePacket(xid=None,giaddr='0.0.0.0',chaddr='00:00:00:00:00:00',ciaddr='0
 
 def main():
 	parser =  OptionParser()
-	parser.add_option("-s","--server", dest="server", help="DHCP server IP")
-	parser.add_option("-p","--port", type="int", dest="port", default=67, help="DHCP server port")
+	parser.add_option("-s","--server", dest="server", default='0.0.0.0', help="DHCP server IP (default %default)")
+	parser.add_option("-p","--port", type="int", dest="port", default=67, help="DHCP server port (default (%default)")
 	parser.add_option("-m","--mac","--chaddr", dest="chaddr", default='00:00:00:00:00:00', help="chaddr: Client's MAC address")
 	parser.add_option("-c","--ciaddr", dest="ciaddr", default='0.0.0.0', help="ciaddr: Client's desired IP address")
 	parser.add_option("-g","--giaddr", dest="giaddr", default='0.0.0.0', help="giaddr: Gateway IP address (if any)")
@@ -90,10 +99,10 @@ def main():
 			default="discover", help="DHCP message type: discover, request, release (default %default)")
 	parser.add_option("-w","--timeout", dest="timeout", type="int", default=4, help="UDP timeout (default %default)")
 	parser.add_option("-r","--require", action="append", type="int", default=[1,3,6,51], dest="required_opts", help="Require options by its number")
+	parser.add_option("-y","--cycle", action="store_true", dest="docycle", help="Do full cycle: DISCOVERY, REQUEST, RELEASE")
+	parser.add_option("-n","--cycles", dest="cycles", type="int", default="1", help="Do number of cycles (default %default)")
 	parser.add_option("-v","--verbose", action="store_true", dest="verbose", help="Verbose operation")
 	parser.add_option("-q","--quiet", action="store_false", dest="verbose", help="Quiet operation")
-	parser.add_option("-y","--cycle", action="store_true", dest="docycle", help="Do full cycle: DISCOVERY, REQUEST, RELEASE")
-	parser.add_option("-n","--cycles", dest="cycles", type="int", default="1", help="Do submitten number of cycles")
 	(opts, args) = parser.parse_args()
 	verbose = opts.verbose
 
