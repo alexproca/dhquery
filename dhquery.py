@@ -10,6 +10,7 @@ from pydhcplib.dhcp_network import DhcpClient
 from pydhcplib.type_hw_addr import hwmac
 from pydhcplib.type_ipv4 import ipv4
 import socket
+import sys
 
 r = Random()
 r.seed()
@@ -25,6 +26,17 @@ dhcpTypes = {
 	8: 'INFORM',
 
 }
+
+nagiosRC = {
+	0: 'OK',
+	1: 'Warning',
+	2: 'Critical',
+	3: 'Unknown',
+}
+
+def nagiosExit(rc,message):
+	print "%s: %s"%(nagiosRC.get(rc,'???'),message)
+	sys.exit(rc)
 
 class SilentClient(DhcpClient):
 	
@@ -103,7 +115,11 @@ def main():
 	parser.add_option("-n","--cycles", dest="cycles", type="int", default="1", help="Do number of cycles (default %default)")
 	parser.add_option("-v","--verbose", action="store_true", dest="verbose", help="Verbose operation")
 	parser.add_option("-q","--quiet", action="store_false", dest="verbose", help="Quiet operation")
+	parser.add_option("--nagios", action="store_true", dest="nagios", help="Nagios mode of operation")
+	
 	(opts, args) = parser.parse_args()
+	
+	if opts.nagios: opts.verbose = False
 	verbose = opts.verbose
 
 	if opts.docycle:
@@ -137,6 +153,7 @@ def main():
 			res = receivePacket(serverip=serverip, serverport=opts.port, timeout=opts.timeout, req=req)
 		except socket.timeout:
 			res = None
+			if opts.nagios: nagiosExit(2,"%s request has been timed out."%request_dhcp_message_type.upper())
 			if verbose != False: print "Timed out."
 			pass
 	
@@ -145,6 +162,9 @@ def main():
 			server_identifier = ipv4(res.GetOption('server_identifier'))
 			chaddr = hwmac(res.GetOption('chaddr')[:6])
 			yiaddr = ipv4(res.GetOption('yiaddr'))
+			
+			if opts.nagios and dhcp_message_type not in (2, 5):
+				nagiosExit(2,"Got %s response for our %s request"%(dhcpTypes.get(dhcp_message_type,'UNKNOWN'),dhcpTypes.get(request_dhcp_message_type,'UNKNOWN')))
 	
 			if verbose != False:
 				print "Received %s packet from %s; [%s] was bound to %s"%(dhcpTypes.get(dhcp_message_type,'UNKNOWN'), server_identifier, chaddr, yiaddr )
@@ -170,8 +190,19 @@ def main():
 		
 		cycleno += 1
 		if cycleno > opts.cycles:
-				break
-		
+			if opts.nagios:
+				if res:
+					nagiosExit(0,"%s finished successfully: %s. yiaddr: %s, chaddr: %s"%(
+						request_dhcp_message_type.upper(),
+						dhcpTypes.get(dhcp_message_type,'UNKNOWN'),
+						yiaddr,
+						opts.chaddr,
+					))
+				elif opts.docycle:
+					nagiosExit(0,"Cycle has been finished successfully. Got %s for %s"%(yiaddr,opts.chaddr))
+				else:
+					nagiosExit(0,"%s has been finished without the answer"%(request_dhcp_message_type.upper()))
+			break
 
 		if opts.docycle:
 			request_dhcp_message_type = "discover"
