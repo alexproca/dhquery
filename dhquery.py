@@ -114,15 +114,16 @@ def main():
 	request_ciaddr = opts.ciaddr 
 	serverip = opts.server 
 	cycleno = 1
+	xid = genxid()
 	
 	while True:
 		
-		if opts.verbose is not False:
+		if opts.cycles > 1 and opts.verbose is not False and (not opts.docycle or request_dhcp_message_type == "discover"):
 			print "="*100
 			print "| Cycle %s"%cycleno
 			print "="*100
 
-		req = preparePacket(giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=request_ciaddr, msgtype=request_dhcp_message_type, required_opts=opts.required_opts)
+		req = preparePacket(xid=xid, giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=request_ciaddr, msgtype=request_dhcp_message_type, required_opts=opts.required_opts)
 		if verbose != False:
 			print "Sending %s [%s] packet to %s"%(request_dhcp_message_type.upper(),opts.chaddr, opts.server)
 		if verbose == True:
@@ -173,9 +174,10 @@ def main():
 		
 
 		if opts.docycle:
-			request_dhcp_message_type = 'discovery'
+			request_dhcp_message_type = "discover"
 			request_ciaddr = opts.ciaddr 
 			serverip = opts.server 
+		xid = genxid()
 
 
 if __name__ == '__main__':
