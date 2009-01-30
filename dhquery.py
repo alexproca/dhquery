@@ -64,6 +64,12 @@ def genxid():
 		decxid = decxid >> 8
 	return xid
 
+def genmac():
+	i = []
+	for z in xrange(6):
+		i.append(r.randint(0,255))
+	return ':'.join(map(lambda x: "%02x"%x,i))
+
 def receivePacket(serverip, serverport, timeout, req):
 	"""Sends and receives packet from DHCP server"""
 	client = SilentClient(client_listen_port=67, server_listen_port=serverport)
@@ -104,7 +110,7 @@ def main():
 	parser =  OptionParser()
 	parser.add_option("-s","--server", dest="server", default='0.0.0.0', help="DHCP server IP (default %default)")
 	parser.add_option("-p","--port", type="int", dest="port", default=67, help="DHCP server port (default (%default)")
-	parser.add_option("-m","--mac","--chaddr", dest="chaddr", default='00:00:00:00:00:00', help="chaddr: Client's MAC address")
+	parser.add_option("-m","--mac","--chaddr", dest="chaddr", help="chaddr: Client's MAC address, default random")
 	parser.add_option("-c","--ciaddr", dest="ciaddr", default='0.0.0.0', help="ciaddr: Client's desired IP address")
 	parser.add_option("-g","--giaddr", dest="giaddr", default='0.0.0.0', help="giaddr: Gateway IP address (if any)")
 	parser.add_option("-t","--type", dest="msgtype", type="choice", choices=["discover","request","release"],
@@ -118,6 +124,11 @@ def main():
 	parser.add_option("--nagios", action="store_true", dest="nagios", help="Nagios mode of operation")
 	
 	(opts, args) = parser.parse_args()
+
+	if not opts.chaddr:
+		chaddr = genmac()
+	else:
+		chaddr = opts.chaddr
 	
 	if opts.nagios: opts.verbose = False
 	verbose = opts.verbose
@@ -139,9 +150,9 @@ def main():
 			print "| Cycle %s"%cycleno
 			print "="*100
 
-		req = preparePacket(xid=xid, giaddr=opts.giaddr, chaddr=opts.chaddr, ciaddr=request_ciaddr, msgtype=request_dhcp_message_type, required_opts=opts.required_opts)
+		req = preparePacket(xid=xid, giaddr=opts.giaddr, chaddr=chaddr, ciaddr=request_ciaddr, msgtype=request_dhcp_message_type, required_opts=opts.required_opts)
 		if verbose != False:
-			print "Sending %s [%s] packet to %s"%(request_dhcp_message_type.upper(),opts.chaddr, opts.server)
+			print "Sending %s [%s] packet to %s"%(request_dhcp_message_type.upper(),chaddr, opts.server)
 		if verbose == True:
 			print "-"*100
 			req.PrintHeaders()
@@ -196,10 +207,10 @@ def main():
 						request_dhcp_message_type.upper(),
 						dhcpTypes.get(dhcp_message_type,'UNKNOWN'),
 						yiaddr,
-						opts.chaddr,
+						chaddr,
 					))
 				elif opts.docycle:
-					nagiosExit(0,"Cycle has been finished successfully. Got %s for %s"%(yiaddr,opts.chaddr))
+					nagiosExit(0,"Cycle has been finished successfully. Got %s for %s"%(yiaddr,chaddr))
 				else:
 					nagiosExit(0,"%s has been finished without the answer"%(request_dhcp_message_type.upper()))
 			break
@@ -209,6 +220,10 @@ def main():
 			request_ciaddr = opts.ciaddr 
 			serverip = opts.server 
 		xid = genxid()
+		if not opts.chaddr:
+			chaddr = genmac()
+		else:
+			chaddr = opts.chaddr
 
 
 if __name__ == '__main__':
