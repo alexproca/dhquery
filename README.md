@@ -17,6 +17,10 @@ Credits: [Stanislav Vitkovskiy](https://github.com/stanvit)
 
 Also it can work as a [Nagios](http://www.nagios.org) plugin.
 
+##Copyright
+
+[GNU General Public License, version 2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
 ##Install with pip
 
 ```pip install -e git+https://github.com/alexproca/dhquery.git#egg=dhquery```
