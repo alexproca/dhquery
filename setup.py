@@ -39,7 +39,7 @@ setup(
 
     # Dependent packages (distributions)
     dependency_links=[
-        "http://pydhcplib.tuxfamily.org/download/pydhcplib-0.6.2.tar.gz",
+        "http://pydhcplib.tuxfamily.org/download/old/pydhcplib-0.4.tar.gz",
         ],
     cmdclass={'install': DHQueryInstall}
     )
