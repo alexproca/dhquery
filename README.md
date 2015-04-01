@@ -1,12 +1,16 @@
-#DHCP command-line query and testing tool 
-Automatically exported from [code.google.com/p/dhquery](http://code.google.com/p/dhquery)
+#DHCP command-line query and testing tool
 
 ##History
-I needed some DHCP testing tool for my projects, based on [FreeRADIUS](http://freeradius.org/) dhcp code.
 
-[dhcping](http://c3rb3r.openwall.net/dhcping/) had no DISCOVER packet handling, it couldn't do stress test and didn't allow changing request parameters.
+Automatically exported from [code.google.com/p/dhquery](http://code.google.com/p/dhquery)
 
-Also, I needed Nagios testing plugin for DHCP cluster testing.
+Credits: [Stanislav Vitkovskiy](https://github.com/stanvit)
+
+>I needed some DHCP testing tool for my projects, based on [FreeRADIUS](http://freeradius.org/) dhcp code.
+
+>[dhcping](http://c3rb3r.openwall.net/dhcping/) had no DISCOVER packet handling, it couldn't do stress test and didn't allow changing request parameters.
+
+>Also, I needed Nagios testing plugin for DHCP cluster testing.
 
 ##Features
 **dhquery** can send any common packet type, repeat it several times for stress testing or perform cycle testing: **DISCOVER, REQUEST and RELEASE**.
