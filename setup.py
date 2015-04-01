@@ -38,7 +38,7 @@ setup(
     long_description=open("README.md").read(),
 
     # Dependent packages (distributions)
-    install_requires=[
+    dependency_links=[
         "http://pydhcplib.tuxfamily.org/download/pydhcplib-0.6.2.tar.gz",
         ],
     cmdclass={'install': DHQueryInstall}
