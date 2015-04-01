@@ -23,7 +23,7 @@ setup(
     author_email="alex.proca@gmail.com",
 
     # Packages
-    packages=["dhquery"],
+    #packages=["dhquery"],
 
     # Include additional files into the package
     include_package_data=True,
