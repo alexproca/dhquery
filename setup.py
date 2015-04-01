@@ -2,6 +2,7 @@ from setuptools import setup
 from setuptools.command.install import install as _install
 
 def _post_install():
+    print("Symlink /usr/local/bin/dhquery to dhquery.py") 
     pass
 
 class DHQueryInstall(_install):
