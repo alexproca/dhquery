@@ -13,6 +13,10 @@ Also, I needed Nagios testing plugin for DHCP cluster testing.
 
 Also it can work as a [Nagios](http://www.nagios.org) plugin.
 
+##Install with pip
+
+```pip install -e git+https://github.com/alexproca/dhquery.git#egg=dhquery```
+
 ##Requirements
 [Python](http://python.org/) and [pydhcplib](http://pydhcplib.tuxfamily.org/pmwiki/)
 
