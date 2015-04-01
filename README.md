@@ -9,9 +9,9 @@ I needed some DHCP testing tool for my projects, based on [FreeRADIUS](http://fr
 Also, I needed Nagios testing plugin for DHCP cluster testing.
 
 ##Features
-dhquery can send any common packet type, repeat it several times for stress testing or perform cycle testing: DISCOVER, REQUEST and RELEASE.
+**dhquery** can send any common packet type, repeat it several times for stress testing or perform cycle testing: **DISCOVER, REQUEST and RELEASE**.
 
-Also it can work as a Nagios plugin.
+Also it can work as a [Nagios](http://www.nagios.org) plugin.
 
 ##Requirements
 [Python](http://python.org/) and [pydhcplib](http://pydhcplib.tuxfamily.org/pmwiki/)
